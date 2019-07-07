@@ -1,0 +1,13 @@
+server:
+  port: 8765
+spring:
+  application:
+    name: feign-consumer
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://peer1:8000/eureka/,http://peer2:8001/eureka/
+
+feign:
+  hystrix:
+    enabled: true

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.jenson.infra.mapper.ApiGatewayMapper">
+
+    <select id="queryApiGateway" resultType="com.jenson.api.controller.dto.ApiGatewayDTO">
+        SELECT
+            ag.id,
+            ag.service_id,
+            ag.path,
+            ag.url,
+            ag.retryable,
+            ag.enabled,
+            ag.strip_prefix,
+            ag.api_name
+        FROM
+            api_gateway ag
+    </select>
+</mapper>

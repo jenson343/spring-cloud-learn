@@ -1,0 +1,18 @@
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://peer1:8000/eureka/,http://peer2:8001/eureka/
+
+server:
+  port: 5000
+spring:
+  application:
+    name: zuul-service
+zuul:
+  prefix: /v1 #前缀，可用作版本号，可以没有
+#  routes:
+#    hiapi:
+#      path: /hello/**
+#      serviceId: hello-world   #利用serviceId的话会进行负载均衡，也可用url
+#      url: http://localhost:8762
+
