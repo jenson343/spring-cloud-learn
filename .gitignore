@@ -1,0 +1,4 @@
+config-server
+*/target/
+.idea/
+.DS_Store

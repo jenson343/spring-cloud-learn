@@ -852,10 +852,10 @@ ClientHttpResponse中的函数
         config:
           server:
             git:
-              uri:  https://code.choerodon.com.cn/ora-cddc/spring-boot-learn-11282/
+              uri:  xxxx
               searchPaths: respo
               username: 11282
-              password: Aa984737759
+              password: ****
             lable: master
 
     
