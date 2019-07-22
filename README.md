@@ -85,7 +85,7 @@ controller 文件必要注解 @RestController
     #配置mapper xml 路径,下划线转驼峰
     mybatis:
       mapperLocations:
-        - classpath*:/mapper/*Mapper.xml
+        - actuatorclasspath*:/mapper/*Mapper.xml
       configuration:
         mapUnderscoreToCamelCase: true
          
@@ -858,6 +858,207 @@ ClientHttpResponse中的函数
               password: ****
             lable: master
 
+
+    
+####12、JPA的使用  
+
+1、依赖
+
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <scope>Compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-jpa</artifactId>
+            </dependency>
+
+2、配置文件
+    
+    spring:
+      jpa:
+        hibernate:
+          ddl-auto: update
+        show-sql: true
+
+3、实体类
+
+    @Data
+    @Entity
+    @Table(name="account")
+    public class Account {
+    	/**
+    	 * 主键
+    	 */
+    	@Id
+    	@GeneratedValue(strategy = GenerationType.IDENTITY)
+    	private String id;
+    	/**
+    	 * 用户名
+    	 */
+    	@Column(nullable = false,unique = true)
+    	private String userName;
+    	/**
+    	 * 密码
+    	 */
+    	@Column(nullable = false)
+    	private String passWord;
+    	/**
+    	 * 角色
+    	 */
+    	@Column
+    	private String[] roles;
+    	
+    }
+    
+重点：@Entity，@Table，@Id，@GeneratedValue，@Column 均在javax.persistence.* 中
+
+4、资源实现接口
+
+    public interface AccountRepository extends JpaRepository<Account,Long> {
+    }
     
     
+####13、OAuth2.0 认证授权服务    
+
+1、依赖
     
+     <!--OAuth-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-oauth2</artifactId>
+        <version>1.2.1.RELEASE</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-security</artifactId>
+        <version>1.2.1.RELEASE</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+    
+    
+2、配置
+
+    #安全配置
+    security:
+      #oauth2配置
+      oauth2:
+        resource:
+          filter-order: 3
+
+#####!这一阶段有问题，暂留，后续再学习
+
+####14、Spring Security  
+
+1、依赖
+    
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    
+仅配置此依赖即可自动启动Spring Security
+
+启动后会在控制台看到自动生成的密码 
+
+    Using default security password: 7d579547-95f8-412d-8b17-7d84079934c1
+
+账号为 user
+    
+2、自定义用户服务信息
+
+2.1 使用内存签名服务
+
+继承WebSecurityConfigurerAdapter，重写configure
+    
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+    import org.springframework.security.config.annotation.authentication.configurers.provisioning.InMemoryUserDetailsManagerConfigurer;
+    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+    import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+    import org.springframework.security.crypto.password.PasswordEncoder;
+    
+    @Configuration
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    
+    	@Override
+    	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+    		// 密码编辑器
+    		PasswordEncoder passwordEncoder =new BCryptPasswordEncoder();
+    		// 使用内存存储
+    		InMemoryUserDetailsManagerConfigurer<AuthenticationManagerBuilder> userConfig
+    				= auth.inMemoryAuthentication()
+    				// 设置密码编辑器
+    				.passwordEncoder(passwordEncoder);
+    		// 注册用户admin，密码为abc，并赋予USER和ADMIN角色权限
+    		userConfig.withUser("admin")
+    				.password(passwordEncoder.encode("abc"))
+    				.authorities("ROLE_USER","ROLE_ADMIN");
+    		// 注册用户myuser，密码为123456，并赋予USER和ADMIN角色权限
+    		userConfig.withUser("myuser")
+    				.password(passwordEncoder.encode("123456"))
+    				.authorities("ROLE_ADMIN");
+    
+    	}
+    }
+
+调用接口后出现如下提示，输入账号密码接口调通
+
+![](/picture/0037.png)  
+
+2.2 基于数据库表进行验证
+    
+    各种失败报错，放弃了～～～～～～～
+
+2.3 配置自定义的用户服务
+
+2.3.1、
+    
+继承WebSecurityConfigurerAdapter,增加一个加密方式，暂时不清楚是否可以把这个bean拿到其他地方
+
+    // 加密方式
+    @Bean
+    public static PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    
+实现官方的 UserDetailsService，如下
+
+    @Component
+    @Slf4j
+    public class MyUserDetailsService implements UserDetailsService {
+    
+    	@Autowired
+    	private PasswordEncoder passwordEncoder;
+    	@Autowired
+    	private RoleMapper roleMapper;
+    	@Autowired
+    	private UserMapper userMapper;
+    
+    	@Override
+    	public UserDetails loadUserByUsername(String userName) throws UsernameNotFoundException {
+    		User user = userMapper.findByUserName(userName);
+    		if (user == null) {
+    			throw new AuthenticationCredentialsNotFoundException("authError");
+    		}
+    		log.info("{}", user);
+    		List<Role> role = roleMapper.findByUserName(userName);
+    		log.info("{}", role);
+    		List<GrantedAuthority> authorities = new ArrayList<>();
+    		role.forEach(role1 -> authorities.addAll(AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_" + role1.getRoleName().toUpperCase())));
+    		log.info("{}", authorities);
+    		return new org.springframework.security.core.userdetails.User(user.getUserName(), user.getPassword(), authorities);
+    	}
+    }
+    
+利用mybatis获取验证信息，这里用了@Component的话mapper接口就需要用@Mapper注解，具体为什么不清楚
+
+以上就实现了自定义账号密码
+
+####15、Spring Security 学习 2 
+
+

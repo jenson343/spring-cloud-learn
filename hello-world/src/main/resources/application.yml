@@ -22,3 +22,5 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://peer1:8000/eureka/,http://peer2:8001/eureka/
+
+value: ${SECURITY_KEY:testConfig}

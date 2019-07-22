@@ -14,12 +14,15 @@ public class HelloWorldController {
 	@Value("${server.port}")
 	String port;
 
+	@Value("${value}")
+	String testValue;
+
 	@Autowired
 	private ApiGatewayMapper apiGatewayMapper;
 
 	@GetMapping("/")
 	public String hello() {
-		return "hello world：" + port;
+		return "hello world：" + port + " testValue:" + testValue;
 	}
 
 	@GetMapping("/query")

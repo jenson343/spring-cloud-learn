@@ -1,0 +1,25 @@
+server:
+  port: 8030
+spring:
+  application:
+    name: security-server
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/security_server?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+mybatis:
+  mapperLocations:
+    - classpath*:/mapper/*Mapper.xml
+  configuration:
+    mapUnderscoreToCamelCase: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://peer1:8000/eureka/
+

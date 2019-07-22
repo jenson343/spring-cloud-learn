@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.jenson.infra.mapper.AccoutMapper">
+
+    <select id="selectAccount" resultType="com.jenson.domain.entity.Account">
+        SELECT
+            ac.id,
+            ac.user_name,
+            ac.pass_word,
+            ac.roles
+        FROM
+            account ac
+        WHERE 1=1
+        AND  ac.id=#{id}
+    </select>
+    <select id="selectAccountByUserName" resultType="com.jenson.domain.entity.Account">
+        SELECT
+            ac.id,
+            ac.user_name,
+            ac.pass_word,
+            ac.roles
+        FROM
+            account ac
+        WHERE 1=1
+        AND  ac.user_name=#{userName}
+    </select>
+</mapper>

@@ -13,6 +13,8 @@
         <module>ribbon-consumer</module>
         <module>feign-consumer</module>
         <module>zuul-service</module>
+        <module>oauth-server</module>
+        <module>security-server</module>
     </modules>
     <packaging>pom</packaging>
 
