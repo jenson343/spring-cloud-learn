@@ -919,40 +919,8 @@ ClientHttpResponse中的函数
     public interface AccountRepository extends JpaRepository<Account,Long> {
     }
     
-    
-####13、OAuth2.0 认证授权服务    
-
-1、依赖
-    
-     <!--OAuth-->
-    <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-starter-oauth2</artifactId>
-        <version>1.2.1.RELEASE</version>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-starter-security</artifactId>
-        <version>1.2.1.RELEASE</version>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-redis</artifactId>
-    </dependency>
-    
-    
-2、配置
-
-    #安全配置
-    security:
-      #oauth2配置
-      oauth2:
-        resource:
-          filter-order: 3
-
-#####!这一阶段有问题，暂留，后续再学习
-
-####14、Spring Security  
+  
+####13、Spring Security  
 
 1、依赖
     
@@ -1059,6 +1027,328 @@ ClientHttpResponse中的函数
 
 以上就实现了自定义账号密码
 
-####15、Spring Security 学习 2 
+####14、Spring Security 案例学习 2 
+
+1、构建工程 springboot-security
+
+引入依赖，同14节，多引入页面渲染多依赖
+    
+    <!--security-->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <!--html页面渲染-->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.thymeleaf.extras</groupId>
+        <artifactId>thymeleaf-extras-springsecurity4</artifactId>
+    </dependency>
+    
+同14节配置类SecurityConfig继承自WebSecurityConfigurerAdapter，多加了注解@EnableWebSecurity  
+ 
+定义configureGloba来实现用户配置在内存中,使用@Autowired注解，产生效果和14节2.1相同
+
+    @EnableWebSecurity
+    @Configuration
+    public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    
+    	@Autowired
+    	public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception{
+    		auth.inMemoryAuthentication()
+    				.withUser("jenson")
+    				.password("123").authorities("ROLE_USER");
+    	}
+    }
+    
+在 SecurityConfig 类名上增加注解 @EnableGlobalMethodSecurity(prePostEnabled = true)，可设定
+用户对某个控制层的方法是否具有访问权限
+
+增加此注解后控制层对应接口函数上使用注解 @PreAuthorize("hasRole('ROLE_ADMIN')") 设定可访问角色
+
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    	@GetMapping
+    	String test(){
+    		return "test~~";
+    	} 
+    
+之后使用user用户访问后报403错误，用admin角色访问后可成功调用。
+    
+2、配置HttpSecurity，重写WebSecurityConfigurerAdapter的 参数为HttpSecurity的configure方法
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+                .authorizeRequests()
+                // 不需要验证可直接访问的资源
+                .antMatchers("/css/**", "/index").permitAll()
+                // 以下资源需要验证，仅能用USER角色来验证
+                .antMatchers("/user/**").hasRole("USER")
+                .antMatchers("/blogs/**").hasRole("USER")
+                .and()
+                // 表单登陆地址及登陆失败地址
+                .formLogin().loginPage("/login").failureUrl("/login-error")
+                .and()
+                // 异常处理定位界面
+                .exceptionHandling().accessDeniedPage("/401");
+
+        // 注销成功后重定向到首页
+        http.logout().logoutSuccessUrl("/");
+    	}
+
+对应controller层定义如下
+
+    @Controller
+    public class MainController {
+    	@RequestMapping("/")
+    	public String root() {
+    		return "redirect:/index";
+    	}
+    
+    	@RequestMapping("/index")
+    	public String index() {
+    		return "index";
+    	}
+    
+    	@RequestMapping("/user/index")
+    	public String userIndex() {
+    		return "user/index";
+    	}
+    
+    	@RequestMapping("login")
+    	public String login() {
+    		return "login";
+    	}
+    
+    	@RequestMapping("/login-error")
+    	public String loginError(Model model) {
+    		model.addAttribute("loginError", true);
+    		return "login";
+    	}
+    
+    	@GetMapping("/401")
+    	public String accessDenied() {
+    		return "401";
+    	}
+    }
+    
+相关页面编写  
+    
+配置文件：
+    
+    spring:
+      thymeleaf:
+        mode: HTML5
+        encoding: UTF-8
+        cache: false
+
+html页面编写在  /resource/templates/* 下
+
+3、利用 auth.userDetailsService() 来创建用户
+
+    @Autowired
+    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService());
+    }
+
+    @Bean
+    @Override
+    public UserDetailsService userDetailsService(){
+        InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
+        manager.createUser(User.withUsername("jenson").password("1234").roles("USER").build());
+        manager.createUser(User.withUsername("admin").password("admin").roles("USER","ADMIN").build());
+        return manager;
+    }
+    
+4、从数据库中读取用户认证信息，使用jpa
+
+4.1、引入jpa和jpa配置
+    
+4.2、同14节2.3.1 依靠 实现 UserDetailsService接口，重写loadUserByUsername，返回UserDetails来实现
+
+    @Service
+    public class UserService implements UserDetailsService {
+    
+    	@Autowired
+    	private UserDao userRepository;
+    	@Override
+    	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    		return userRepository.findByUsername(username);
+    	}
+    }
+    
+####15、使用Spring Cloud OAuth2 
+
+一、编写授权服务
+
+1、oath2的表结构是固定的
+
+2、引入依赖，oauth2依赖,使用的是jpa连接数据库
+    
+    <dependencies>
+            <!--oauth2-->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-oauth2</artifactId>
+            </dependency>
+            <!--mysql-->
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+            </dependency>
+            <!--jpa-->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-jpa</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+            </dependency>
+            <!--eureka-client-->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-eureka</artifactId>
+                <version>1.3.5.RELEASE</version>
+            </dependency>
+        </dependencies>
+
+3、配置文件，除数据库相关配置外主要配置如下
+
+    server:
+      context-path: /uaa
+    security:
+      oauth2:
+        resource:
+          filter-order: 3
+
+4、配置spring security ，继承WebSecurityConfigurerAdapter，同上两节学习的继承自同一类。
+
+5、从数据库中获取用户密码同14节
+
+6、配置AuthorizationServer，在启动类中
+
+7、暴露Remote Token Services接口
+
+8、获取token
+
+curl获取:  curl service-hi:123456@localhost:8050/uaa/oauth/token -d grant_type=password -d username=jensondb2 -d password=1234
+![](/picture/0038.png)  
+
+postman 获取
+
+[{"key":"Authorization","value":"Basic c2VydmljZS1oaToxMjM0NTY=","description":""}]
+
+c2VydmljZS1oaToxMjM0NTY 为 service-hi:123456 base64编码
+
+![](/picture/0040.png)  
+![](/picture/0039.png)  
+
+二、编写service-hi受保护资源服务
+
+1、依赖
+    
+    <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-eureka</artifactId>
+                <version>1.3.5.RELEASE</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-feign</artifactId>
+                <version>1.4.5.RELEASE</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-starter-oauth2</artifactId>
+                <version>1.2.1.RELEASE</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-jpa</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+            </dependency>
+        </dependencies>
+        
+2、配置文件
+
+security配置如下：
+    
+    security:
+      oauth2:
+        resource:
+          # 用于获取当前Token的用户信息
+          user-info-uri: http://localhost:8050/uaa/users/current
+        client:
+          # 以下配置需与uaa服务中配置一致
+          client-id: service-hi
+          client-secret: 123456
+          access-token-uri: http://localhost:8050/uaa/oauth/token
+          grant-type: client_credentials,password
+          scope: server               
+
+3、Resource Server配置类,继承自ResourceServerConfigurerAdapter，配置类似于Spring Security的HttpSecurity配置  
+
+    @Configuration
+    @EnableResourceServer
+    @EnableGlobalMethodSecurity(prePostEnabled = true)
+    public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
+    
+    	@Override
+    	public void configure(HttpSecurity http) throws Exception{
+    		http.authorizeRequests()
+    				.antMatchers("/user/registry").permitAll()
+    				.anyRequest().authenticated();
+    	}
+    }
+    
+4、配置OAuth2 Client来访问被保护资源
+
+    @EnableOAuth2Client
+    @EnableConfigurationProperties
+    @Configuration
+    public class OAth2ClientConfig {
+    
+    	// 配置受保护的资源信息，通过读取配置文件中security.oauth2.client中的配置来获取bean的属性
+    	@Bean
+    	@ConfigurationProperties(prefix = "security.oauth2.client")
+    	public ClientCredentialsResourceDetails clientCredentialsResourceDetails(){
+    		return new ClientCredentialsResourceDetails();
+    	}
+    
+    	/**
+    	 *  @EnableOAuth2Client.
+    	 * 1.oauth2ClientContextFilter
+    	 * 2.AccessTokenRequest
+    	 */
+    	// 配置过滤器，存储当前请求和上下文
+    	@Bean
+    	public RequestInterceptor oauth2FeignRequestInterceptor(){
+    		return new OAuth2FeignRequestInterceptor(new DefaultOAuth2ClientContext(), clientCredentialsResourceDetails());
+    	}
+    
+    	// 用于向Uaa服务请求
+    	@Bean
+    	public OAuth2RestTemplate clientCredentialsRestTemplate() {
+    		return new OAuth2RestTemplate(clientCredentialsResourceDetails());
+    	}
+    }
+
+    
+5、编写测试接口
+    
+注意：在配置文件中 security.oauth2.resource.user-info-uri 的配置出错会导致校验不成功
 
 
+####16、使用Spring Cloud OAuth2 和JWT

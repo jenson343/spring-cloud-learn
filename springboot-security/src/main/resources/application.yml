@@ -1,0 +1,22 @@
+server:
+  port: 8040
+spring:
+  application:
+    name: springboot-security
+  thymeleaf:
+    mode: HTML5
+    encoding: UTF-8
+    cache: false
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/spring_security?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://peer1:8000/eureka/

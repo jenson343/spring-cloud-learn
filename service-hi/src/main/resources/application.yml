@@ -1,0 +1,30 @@
+server:
+  port: 8052
+spring:
+  application:
+    name: service-hi
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/spring_oauth?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+security:
+  oauth2:
+    resource:
+      # 用于获取当前Token的用户信息
+      user-info-uri: http://localhost:8050/uaa/users/current
+    client:
+      # 以下配置需与uaa服务中配置一致
+      client-id: service-hi
+      client-secret: 123456
+      access-token-uri: http://localhost:8050/uaa/oauth/token
+      grant-type: client_credentials,password
+      scope: server
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://peer1:8000/eureka/
