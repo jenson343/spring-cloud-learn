@@ -1351,4 +1351,5 @@ security配置如下：
 注意：在配置文件中 security.oauth2.resource.user-info-uri 的配置出错会导致校验不成功
 
 
-####16、使用Spring Cloud OAuth2 和JWT
+
+
